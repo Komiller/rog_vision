@@ -2,7 +2,7 @@ import time
 import math as m
 import numpy as np
 import pydirectinput as pd
-
+from line_profiler import profile
 
 class position():
     timer=0
@@ -19,6 +19,7 @@ class position():
         self.walk=False
         self.x2=0
         self.x2_time = 0
+        self.last_call=0
 
     def checkpoint(self):
         self.x = 0
@@ -27,24 +28,27 @@ class position():
         self.betta = 0
         self.timer = 0
 
-
+    #@profile
     def rotate(self,x,y):
         self.alpha+=x
         self.betta+=y
-        while abs(y) > 10:
-            pd.move(0, np.sign(y) * 10, relative=True)
-            y = y - np.sign(y) * 10
+        pd.move(x, y, relative=True)
+        """
+        while abs(y) > 80:
+            pd.move(0, np.sign(y) * 80, relative=True)
+            y = y - np.sign(y) * 80
         else:
             pd.move(0, y, relative=True)
+
 
         while abs(x) > 80:
             pd.move(np.sign(x) * 80, 0, relative=True)
             x = x - np.sign(x) * 80
         else:
-            pd.move(x, 0, relative=True)
+            pd.move(x, 0, relative=True)"""
 
     def start_walk(self):
-
+        self.last_call=time.time()
         pd.keyDown('w')
         self.timer = time.time()
         self.walk=True
@@ -82,14 +86,12 @@ class position():
             pd.keyUp('w')
             self.x=0
         self.rotate(-self.alpha, 0)
-        for i in range(12):
-            pd.move(0, 120, relative=True)
-        pd.move(0, -77 * 3)
+        pd.move(0, 1080, relative=True)
+        pd.move(0, 77 * 5, relative=True)
 
     def betta_to_zero(self):
-        for i in range(12):
-            pd.move(0, 120, relative=True)
-        pd.move(0, -77 * 3)
+        pd.move(0,1080, relative=True)
+        pd.move(0, 77 * 5, relative=True)
 
     def x2_timer_start(self):
         self.x2_time=time.time()

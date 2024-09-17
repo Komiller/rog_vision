@@ -14,22 +14,22 @@ size=42
 def load_model(weights_path):
     # Предполагается, что вы знаете архитектуру вашей модели
     model = Sequential([
-        layers.Conv2D(2, (3, 3), activation='selu', input_shape=(size, size, 3)),
+        layers.Conv2D(4, (3, 3), activation='selu', input_shape=(size, size, 3)),
         layers.MaxPool2D(1, 1),
-        layers.Conv2D(8, (3, 3), activation='selu'),
+        layers.Conv2D(16, (3, 3), activation='selu'),
         layers.MaxPool2D(1, 1),
         layers.Dropout(0.05),
 
-        layers.Conv2D(16, (3, 3), activation='selu'),
+        layers.Conv2D(32, (3, 3), activation='selu'),
         layers.MaxPool2D(1, 1),
         layers.Dropout(0.1),
-        layers.Conv2D(32, (2, 2), activation='selu'),
-        layers.MaxPool2D(1, 1),
         layers.Conv2D(64, (2, 2), activation='selu'),
+        layers.MaxPool2D(1, 1),
+        layers.Conv2D(128, (2, 2), activation='selu'),
         layers.MaxPool2D(1, 1),
         layers.Dropout(0.2),
         layers.Flatten(),
-        layers.Dense(75, activation='selu'),
+        layers.Dense(150, activation='selu'),
 
         layers.Dense(1, activation='sigmoid')
     ])
@@ -53,9 +53,11 @@ def classify_image(model, screenshot):
     # Подготовим изображение
     img_array = preprocess_image(screenshot,target_size=(42, 42))
 
+
     # Сделаем предсказание
     predictions = model.predict(img_array)
-    if predictions[0]<0.08:
+    print(predictions)
+    if predictions[0]<0.01:
         return True
     else:
         return False
@@ -89,10 +91,6 @@ if __name__ == '__main__':
     model = load_model(weights_path)
     while True:
         if keyboard.is_pressed(key):
-            while True:
-                with mss() as sct:
-                    screenshot = sct.grab({'mon': 1, 'top': 519, 'left': 939, 'width': 42, 'height': 42})
-                if classify_image(model, screenshot):
-                    pg.keyDown('e')
-                    time.sleep(0.05)
-                    pg.keyUp('e')"""
+            with mss() as sct:
+                screenshot = sct.grab({'mon': 1, 'top': 519, 'left': 939, 'width': 42, 'height': 42})
+            classify_image(model, screenshot)"""

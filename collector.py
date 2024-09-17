@@ -10,8 +10,9 @@ import cv2
 import math as m
 import test
 from mover import position
-from profilehooks import profile
 from icecream import ic
+from controls import interface
+count=0
 
 #@profile(stdout=False, filename='baseline.prof')
 def alternative(arr, i=0):
@@ -121,21 +122,21 @@ def find_target(first=True):
             coords = np.array(np.where(thresh.astype(bool) == True))
             x = np.average(coords[1]) - pg.size()[0] // 2
             y = np.average(coords[0]) - pg.size()[1] // 2
-            #cv2.imwrite('logs/screenshot.png', screenshot)
-            #cv2.imwrite('logs/thresh.png', thresh)
+            num=True not in (coords[0]>pg.size()[1]+200)
+            #cv2.imwrite(f'logs/screenshot{num}.png', screenshot)
+            #cv2.imwrite(f'logs/thresh{num}.png', thresh)
 
-
-
-            if True in (coords[0]>750):
-                delta_h = 5
+            if (True in (coords[0]<pg.size()[1]-50)) and (True not in (coords[0]>pg.size()[1]//2+200)):
+                delta_h = rectangles[0][3]//4
             else:
-                delta_h = rectangles[0][3]
+               delta_h=5
 
             while (np.isnan(x) or np.isnan(y)) and first:
                 x, y, delta_h = find_target(False)
                 if count >= 5: return False
 
             x = int(x)
+            #if x< 10: x=0
             y = int(y)
 
             return x, y, delta_h
@@ -156,10 +157,10 @@ def find_target(first=True):
         #cv2.imwrite('logs/screenshot.png', screenshot)
         #cv2.imwrite('logs/thresh.png', thresh)
         count=0
-        if True in (coords[0]>750):
-            delta_h = 5
+        if (True in (coords[0]<pg.size()[1]-50)) and (True not in (coords[0]>pg.size()[1]//2+200)):
+            delta_h = rectangles[0][3] // 4
         else:
-            delta_h = rect[3]
+            delta_h = 5
 
         while (np.isnan(x) or np.isnan(y)) and first:
             x,y,delta_h=find_target(False)
@@ -167,6 +168,7 @@ def find_target(first=True):
 
 
         x = int(x)
+        #if x < 10: x = 0
         y = int(y)
 
 
@@ -191,17 +193,31 @@ def ready():
         if len(coords[1])>35 and np.average(coords[1]-21)+np.average(coords[0]-21)<2:return True
         return False
 
-def move_to_target(cam,x,y):
-    length = 10
+
+def move_to_target(cam,x,y,z):
+    if abs(x) > 10 or abs(y) > z:
+        cam.end_walk()
+    wwelse: x = 0
     speed = 77  # pixel move for 15 degree turn
     x = int(m.atan(x / 800) * 180 / m.pi * speed / 15)
     y = int(m.atan(y / 800) * 180 / m.pi * speed / 15)
     cam.rotate(x, y)
+
     a = find_target()
     if not a: return True
     x=a[0]
     y=a[1]
-    while abs(x) > 5 or abs(y) > 5:
+    global count1
+    count1=0
+    while abs(x) > 10 or abs(y) > a[2]:
+        if count1>30:
+            count1=0
+            pd.keyDown('s')
+            time.sleep(1)
+            pd.keyUp('s')
+        if abs(x) > 10 or abs(y) > a[2]:
+            cam.end_walk()
+        else: x=0
         speed = 77  # pixel move for 15 degree turn
         x = int(m.atan(x / 800) * 180 / m.pi * speed / 15)
         y = int(m.atan(y / 800) * 180 / m.pi * speed / 15)
@@ -210,16 +226,27 @@ def move_to_target(cam,x,y):
         if not a: return True
         x = a[0]
         y = a[1]
-        if abs(x) < length or abs(y) < length:
-            length = length - 1
-        if length == 2: break
+
         with mss() as sct:
             screenshot = sct.grab({'mon': 1, 'top': 519, 'left': 939, 'width': 42, 'height': 42})
         if test.classify_image(model, screenshot):
             pd.keyDown('e')
             time.sleep(0.05)
             pd.keyUp('e')
+            count1=0
+            look_around(cam)
             continue
+        count1+=1
+    return False
+
+
+def look_around(cam):
+    cam.betta_to_zero()
+    for _ in range(4):
+        if find_target():
+            return True
+        else:
+            cam.rotate(77*6,0)
     return False
 
 
@@ -228,45 +255,74 @@ def move_to_target(cam,x,y):
 
 
 
-
-
-
-
 """
+
 if __name__ == '__main__':
     key = 'f'
     fin='g'
     regens=0
+    cam = position()
+    weights_path = 'best_model.keras'
+    model = test.load_model(weights_path)
     while True:
+
         if keyboard.is_pressed(key):
-            find_target()
+    
+            while True:
+                a = find_target()
+                if not a: break
+                if abs(a[0]) < 5:
+                    move_to_target(cam, 0, a[1], a[2])
+                else:
+                    cam.end_walk()
+                    move_to_target(cam, a[0], a[1], a[2])
+
+
+            cam.start_walk()
+            while True:
+                a = find_target()
+                if not a: break
+                if abs(a[0]) < 5:
+                    move_to_target(cam, 0, a[1], a[2])
+                    cam.continue_walk()
+                else:
+                    cam.end_walk()
+                    move_to_target(cam, a[0], a[1], a[2])
+                    cam.continue_walk()
+
+                cam.continue_walk()
 
 """
+
+
 if __name__ == '__main__':
     key = 'f'
     fin='q'
     regens=0
-    count=0
+    count1=0
     weights_path = 'best_model.keras'
     model = test.load_model(weights_path)
-    x=5
-    y=20
-    delta_y=5
-    direction=1
-    nturns=y/delta_y
+    x_walk=30
+    y_walk=38
+    delta_y=4
+    direction=-1
+    nturns=y_walk/delta_y
     turns=0
     cam = position()
+    inter=interface({2:{'cd':0,'self':True}})
     while True:
         if keyboard.is_pressed(key):
             while True:
 
                 cam.start_walk()
+                pd.keyDown('shift')
                 cam.x2_timer_start()
 
                 while True:
                     cam.x2_timer_end()
-                    if cam.x2>50:
+                    if cam.x2>x_walk:
                         print('123243143')
+                        pd.keyUp('shift')
                         cam.end_walk()
 
                         cam.rotate(direction*77*6,0)
@@ -275,13 +331,17 @@ if __name__ == '__main__':
                         cam.end_walk()
 
                         cam.rotate(direction * 77 * 6,0)
+
+
                         cam.start_walk()
-                        time.sleep(cam.x2-50)
+                        time.sleep(cam.x2-x_walk)
                         cam.end_walk()
 
-                        direction=direction*-1
+                        direction = direction * -1
                         cam.checkpoint()
+
                         cam.start_walk()
+                        pd.keyDown('shift')
                         cam.x2=0
                         cam.x2_timer_start()
 
@@ -290,6 +350,25 @@ if __name__ == '__main__':
 
                     if turns>nturns:
                         direction = direction * -1
+                    if inter.hunger_status()<25:
+                        pd.keyDown('i')
+                        time.sleep(0.05)
+                        pd.keyUp('i')
+                        pd.moveTo(1560,440)
+                        time.sleep(0.05)
+                        pd.click()
+                        time.sleep(0.1)
+                        pd.click()
+                        time.sleep(0.2)
+                        pd.keyDown('i')
+                        time.sleep(0.05)
+                        pd.keyUp('i')
+
+                    if inter.energy_status()<15:
+                        cam.x2_timer_end()
+                        time.sleep(16)
+                        cam.x2_timer_start()
+
 
 
                     match find_target():
@@ -301,46 +380,42 @@ if __name__ == '__main__':
                             pass
 
                 cam.end_walk()
+                pd.keyUp('shift')
                 cam.x2_timer_end()
                 cam.checkpoint()
                 while True:
-                    if keyboard.is_pressed(key):break
                     a = find_target()
                     if not a: break
-                    if abs(a[0])>5 or abs(a[1])>a[2]:
+                    if abs(a[0])<5:
+                        move_to_target(cam, 0, a[1],a[2])
+                        cam.continue_walk()
+                    else:
                         cam.end_walk()
-                        if move_to_target(cam,a[0],a[1]):
-                            continue
-                        with mss() as sct:
-                            screenshot = sct.grab({'mon': 1, 'top': 519, 'left': 939, 'width': 42, 'height': 42})
-                        if test.classify_image(model, screenshot):
-                            pd.keyDown('e')
-                            time.sleep(0.05)
-                            pd.keyUp('e')
-                            cam.betta_to_zero()
-                            continue
-                        cam.start_walk()
-
-                    with mss() as sct:
-                        screenshot = sct.grab({'mon': 1, 'top': 519, 'left': 939, 'width': 42, 'height': 42})
-                    if test.classify_image(model, screenshot):
-                        pd.keyDown('e')
-                        time.sleep(0.05)
-                        pd.keyUp('e')
-                        cam.end_walk()
-                        cam.betta_to_zero()
-                        continue
+                        move_to_target(cam, a[0], a[1],a[2])
+                        cam.continue_walk()
 
                     cam.continue_walk()
-                    #wprint(time.time()-t)
 
 
                 if cam.x<10:
                     cam.return_back(x_return=False)
-                    print(cam.x2)
-                    cam.x2+=cam.x
-                    print(cam.x2)
+                    cam.x2+=cam.x/1.5
                 else: cam.return_back()
+"""
+
+if __name__ == '__main__':
+    key = 'f'
+    fin='q'
+    count=0
+    while True:
+        if keyboard.is_pressed(key):
+            with mss() as sct:
+                screenshot = sct.grab({'mon': 1, 'top': 519, 'left': 939, 'width': 42, 'height': 42})
+                screenshot = np.array(screenshot)
+                cv2.imwrite(f'dataset/curs/curs{0+count}.png',screenshot)
+                time.sleep(1)
+                count+=1
+"""
 
 
 
