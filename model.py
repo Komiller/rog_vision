@@ -31,6 +31,7 @@ import splitfolders
 
 woman_path='no_curs'
 men_path='curs'
+splitfolders.ratio('dataset', 'faces_splited', ratio=(0.8, 0.15, 0.05), seed=18, group_prefix=None )
 
 # определим параметры нормализации данных
 train = ImageDataGenerator(rescale=1 / 255)
@@ -60,24 +61,24 @@ data_augmentation = keras.Sequential(
 model = Sequential([
     # добавим аугментацию данных
     data_augmentation,
-    layers.Conv2D(2, (3, 3), activation='selu', input_shape=(size, size, 3)),
+    layers.Conv2D(4, (3, 3), activation='selu', input_shape=(size, size, 3)),
     layers.MaxPool2D(1, 1),
-    layers.Conv2D(8, (3, 3), activation='selu'),
+    layers.Conv2D(16, (3, 3), activation='selu'),
     layers.MaxPool2D(1, 1),
     layers.Dropout(0.05),
 
-    layers.Conv2D(16, (3, 3), activation='selu'),
+    layers.Conv2D(32, (3, 3), activation='selu'),
     layers.MaxPool2D(1, 1),
     layers.Dropout(0.1),
-    layers.Conv2D(32, (2, 2), activation='selu'),
-    layers.MaxPool2D(1, 1),
     layers.Conv2D(64, (2, 2), activation='selu'),
+    layers.MaxPool2D(1, 1),
+    layers.Conv2D(128, (2, 2), activation='selu'),
     layers.MaxPool2D(1, 1),
     layers.Dropout(0.2),
     layers.Flatten(),
-    layers.Dense(75, activation='selu'),
+    layers.Dense(150, activation='selu'),
 
-    layers.Dense(2, activation='sigmoid')
+    layers.Dense(1, activation='sigmoid')
 ])
 
 # Файл для сохранения модели с лучшими параметрами
@@ -94,6 +95,7 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     mode='max',
     save_best_only=True)
 
+model.load_weights('best_model.keras')
 # Тренировка модели
 history = model.fit(train_data, batch_size=500, verbose=1, epochs=35,
                     validation_data=val_data,
