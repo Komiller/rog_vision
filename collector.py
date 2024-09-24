@@ -13,7 +13,7 @@ from mover import position
 from icecream import ic
 from controls import interface
 from rout_routine import rout
-from positioning import draw_rout
+from drawer import draw_rout
 count=0
 
 #@profile(stdout=False, filename='baseline.prof')
@@ -128,20 +128,27 @@ def find_target(first=True):
             #cv2.imwrite(f'logs/screenshot{num}.png', screenshot)
             #cv2.imwrite(f'logs/thresh{num}.png', thresh)
 
-            if (True in (coords[0]<pg.size()[1]-50)) and (True not in (coords[0]>pg.size()[1]//2+200)):
-                delta_h = rectangles[0][3]//4
+
+            if rectangles[0][2]<60 and rectangles[0][3]<60:
+                y+=120
+                delta_y=120+rectangles[0][3]//2
+                delta_x=rectangles[0][2]//2
+            elif (True in (coords[0]<pg.size()[1]-50)) and (True not in (coords[0]>pg.size()[1]//2+200)):
+                delta_y = rectangles[0][3]//4
+                delta_x = rectangles[0][2]//4
             else:
-               delta_h=5
+               delta_y=5
+               delta_x=5
 
             while (np.isnan(x) or np.isnan(y)) and first:
-                x, y, delta_h = find_target(False)
+                x, y, delta_y = find_target(False)
                 if count >= 5: return False
 
             x = int(x)
             #if x< 10: x=0
             y = int(y)
 
-            return x, y, delta_h
+            return x, y,delta_x, delta_y
 
 
 
@@ -159,14 +166,17 @@ def find_target(first=True):
         #cv2.imwrite('logs/screenshot.png', screenshot)
         #cv2.imwrite('logs/thresh.png', thresh)
         count=0
-        if (True in (coords[0]<pg.size()[1]-50)) and (True not in (coords[0]>pg.size()[1]//2+200)):
-            delta_h = rectangles[0][3] // 4
-        else:
-            delta_h = 5
 
-        while (np.isnan(x) or np.isnan(y)) and first:
-            x,y,delta_h=find_target(False)
-            if count>=5: return False
+        if rect[2] < 60 and rect[3] < 60:
+            y += 120
+            delta_y = 120+rect[3]//2
+            delta_x = rectangles[0][2] // 2
+        elif (True in (coords[0] < pg.size()[1] - 50)) and (True not in (coords[0] > pg.size()[1] // 2 + 200)):
+            delta_y = rect[3] // 4
+            delta_x = rect[2] // 4
+        else:
+            delta_y = 5
+            delta_x = 5
 
 
         x = int(x)
@@ -174,7 +184,7 @@ def find_target(first=True):
         y = int(y)
 
 
-        return x, y , delta_h
+        return x, y ,delta_x, delta_y
 
 def ready():
     with mss() as sct:
@@ -196,10 +206,10 @@ def ready():
         return False
 
 
-def move_to_target(cam,x,y,z):
-    if abs(x) > 10 or abs(y) > z:
+def move_to_target(cam,x,y,delta_x,delta_y):
+    ic(delta_x,delta_y,x,y)
+    if abs(x) > delta_x or abs(y) > delta_y:
         cam.end_walk()
-    wwelse: x = 0
     speed = 77  # pixel move for 15 degree turn
     x = int(m.atan(x / 800) * 180 / m.pi * speed / 15)
     y = int(m.atan(y / 800) * 180 / m.pi * speed / 15)
@@ -211,15 +221,15 @@ def move_to_target(cam,x,y,z):
     y=a[1]
     global count1
     count1=0
-    while abs(x) > 10 or abs(y) > a[2]:
+    while abs(x) > 5 or abs(y) > 5:
+        ic(a[2], a[3], x, y)
         if count1>30:
             count1=0
             pd.keyDown('s')
             time.sleep(1)
             pd.keyUp('s')
-        if abs(x) > 10 or abs(y) > a[2]:
+        if abs(x) > a[2] or abs(y) > a[3]:
             cam.end_walk()
-        else: x=0
         speed = 77  # pixel move for 15 degree turn
         x = int(m.atan(x / 800) * 180 / m.pi * speed / 15)
         y = int(m.atan(y / 800) * 180 / m.pi * speed / 15)
@@ -235,6 +245,11 @@ def move_to_target(cam,x,y,z):
             pd.keyDown('e')
             time.sleep(0.05)
             pd.keyUp('e')
+            if test.classify_image(model, screenshot):
+                pd.keyDown('e')
+                time.sleep(0.05)
+                pd.keyUp('e')
+
             count1=0
             look_around(cam)
             continue
@@ -256,8 +271,8 @@ def look_around(cam):
 
 
 
-
 """
+
 
 if __name__ == '__main__':
     key = 'f'
@@ -269,29 +284,11 @@ if __name__ == '__main__':
     while True:
 
         if keyboard.is_pressed(key):
-    
-            while True:
-                a = find_target()
-                if not a: break
-                if abs(a[0]) < 5:
-                    move_to_target(cam, 0, a[1], a[2])
-                else:
-                    cam.end_walk()
-                    move_to_target(cam, a[0], a[1], a[2])
-
-
             cam.start_walk()
             while True:
                 a = find_target()
-                if not a: break
-                if abs(a[0]) < 5:
-                    move_to_target(cam, 0, a[1], a[2])
-                    cam.continue_walk()
-                else:
-                    cam.end_walk()
-                    move_to_target(cam, a[0], a[1], a[2])
-                    cam.continue_walk()
-
+                if not a: continue
+                move_to_target(cam, 0, a[1], a[2], a[3])
                 cam.continue_walk()
 
 """
@@ -382,7 +379,7 @@ if __name__ == '__main__':
                     match find_target():
                         case False:
                             pass
-                        case x, y,d:
+                        case x, y,delta_x,delta_y:
                             break
                         case _:
                             pass
@@ -395,11 +392,11 @@ if __name__ == '__main__':
                     a = find_target()
                     if not a: break
                     if abs(a[0])<5:
-                        move_to_target(cam, 0, a[1],a[2])
+                        move_to_target(cam, 0, a[1],a[2],a[3])
                         cam.continue_walk()
                     else:
                         cam.end_walk()
-                        move_to_target(cam, a[0], a[1],a[2])
+                        move_to_target(cam, a[0], a[1],a[2],a[3])
                         cam.continue_walk()
 
                     cam.continue_walk()

@@ -31,6 +31,7 @@ class position():
     #@profile
     def rotate(self,x,y):
         self.alpha+=x
+        if self.betta>77*7 and y>0 : y=y*2
         self.betta+=y
         pd.move(x, y, relative=True)
         """
@@ -92,6 +93,7 @@ class position():
     def betta_to_zero(self):
         pd.move(0,1080, relative=True)
         pd.move(0, 77 * 5, relative=True)
+        self.betta=77*5
 
     def x2_timer_start(self):
         self.x2_time=time.time()
