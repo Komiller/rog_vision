@@ -95,7 +95,11 @@ class interface:
             screenshot = sct.grab({'mon': 1, 'top': 46, 'left': 7, 'width': w, 'height': h})
             screenshot = np.array(screenshot)
             green = find_color(screenshot, w, h, 15, 22, 70)
-            right = np.array(np.where(green == True))[1].max()
+            coords = np.where(green == True)
+            if len(coords[1]) != 0:
+                right = max(np.array(coords)[1].max(), 0)
+            else:
+                right = 0
             return round(right / w, 2) * 100
 
     def hunger_status(self):
@@ -105,7 +109,11 @@ class interface:
             screenshot = sct.grab({'mon': 1, 'top': 57, 'left': 7, 'width': w, 'height': h})
             screenshot = np.array(screenshot)
             green = find_color(screenshot, w, h, 55, 66, 30)
-            right = np.array(np.where(green == True))[1].max()
+            coords = np.where(green == True)
+            if len(coords[1]) !=0:
+                right=max(np.array(coords)[1].max(),0)
+            else:
+                right=0
             return round(right / w, 2) * 100
 
 
