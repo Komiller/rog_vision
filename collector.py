@@ -12,6 +12,8 @@ import test
 from mover import position
 from icecream import ic
 from controls import interface
+from rout_routine import rout
+from positioning import draw_rout
 count=0
 
 #@profile(stdout=False, filename='baseline.prof')
@@ -302,16 +304,25 @@ if __name__ == '__main__':
     count1=0
     weights_path = 'best_model.keras'
     model = test.load_model(weights_path)
-    x_walk=30
-    y_walk=38
+    x_walk=20
+    y_walk=34
     delta_y=4
-    direction=-1
+    direction=1
     nturns=y_walk/delta_y
     turns=0
     cam = position()
     inter=interface({2:{'cd':0,'self':True}})
     while True:
         if keyboard.is_pressed(key):
+            points=draw_rout()
+            routt=rout(points)
+            routt.at_position()
+            routt.to_current_point()
+
+            turn = int((routt.angle_t - routt.angle) * 180 / np.pi * 77 // 15)
+            pd.move(turn, 0, relative=True)
+
+
             while True:
 
                 cam.start_walk()
@@ -320,24 +331,20 @@ if __name__ == '__main__':
 
                 while True:
                     cam.x2_timer_end()
-                    if cam.x2>x_walk:
-                        print('123243143')
+                    if cam.x2>routt.time_estimate:
+                        if routt.at_position():
+                            routt.go_to_next()
+                            routt.at_position()
+                            routt.to_current_point()
+                        else:
+                            routt.to_current_point()
+
                         pd.keyUp('shift')
                         cam.end_walk()
 
-                        cam.rotate(direction*77*6,0)
-                        cam.start_walk()
-                        time.sleep(delta_y)
-                        cam.end_walk()
+                        turn = int((routt.angle_t - routt.angle) * 180 / np.pi * 77 // 15)
+                        pd.move(turn, 0, relative=True)
 
-                        cam.rotate(direction * 77 * 6,0)
-
-
-                        cam.start_walk()
-                        time.sleep(cam.x2-x_walk)
-                        cam.end_walk()
-
-                        direction = direction * -1
                         cam.checkpoint()
 
                         cam.start_walk()
@@ -345,7 +352,6 @@ if __name__ == '__main__':
                         cam.x2=0
                         cam.x2_timer_start()
 
-                        turns+=1
                     else: cam.x2_timer_start()
 
                     if turns>nturns:
@@ -354,7 +360,7 @@ if __name__ == '__main__':
                         pd.keyDown('i')
                         time.sleep(0.05)
                         pd.keyUp('i')
-                        pd.moveTo(1560,440)
+                        pd.moveTo(1841,549)
                         time.sleep(0.05)
                         pd.click()
                         time.sleep(0.1)
@@ -365,9 +371,11 @@ if __name__ == '__main__':
                         pd.keyUp('i')
 
                     if inter.energy_status()<15:
+                        cam.end_walk()
                         cam.x2_timer_end()
                         time.sleep(16)
                         cam.x2_timer_start()
+                        cam.start_walk()
 
 
 
@@ -396,11 +404,14 @@ if __name__ == '__main__':
 
                     cam.continue_walk()
 
+                routt.at_position()
+                routt.to_current_point()
+                cam.x2=0
+                turn = int((routt.angle_t - routt.angle) * 180 / np.pi * 77 // 15)
+                pd.move(turn, 0, relative=True)
 
-                if cam.x<10:
-                    cam.return_back(x_return=False)
-                    cam.x2+=cam.x/1.5
-                else: cam.return_back()
+
+
 """
 
 if __name__ == '__main__':
